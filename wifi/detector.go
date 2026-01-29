@@ -16,9 +16,11 @@ func GetCurrentSSID() (string, error) {
 
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
-		if strings.Contains(line, "SSID") && !strings.Contains(line, "BSSID") {
-			parts := strings.Split(line, ":")
-			if len(parts) > 1 {
+		trimmedLine := strings.TrimSpace(line)
+		// Match exactly "SSID : <name>" to avoid false positives
+		if strings.HasPrefix(trimmedLine, "SSID") && !strings.HasPrefix(trimmedLine, "BSSID") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
 				ssid := strings.TrimSpace(parts[1])
 				if ssid != "" {
 					return ssid, nil

@@ -49,13 +49,13 @@ func main() {
 	var password string
 	var err error
 
-	if *ssidFlag == "" && *ssidShortFlag != "" {
-		*ssidFlag = *ssidShortFlag
+	ssid = *ssidFlag
+	if ssid == "" {
+		ssid = *ssidShortFlag
 	}
 
-	if *ssidFlag != "" {
+	if ssid != "" {
 		// Use specified SSID
-		ssid = *ssidFlag
 		password, err = wifi.GetPassword(ssid)
 	} else {
 		// Get current connected WiFi

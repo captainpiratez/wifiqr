@@ -33,6 +33,10 @@ func GenerateWiFiQR(ssid, password, outputPath string) error {
 	// Generate QR code
 	err := qr.WriteFile(wifiString, qr.Medium, 256, outputPath)
 	if err != nil {
+		// Check for permission-related errors
+		if strings.Contains(err.Error(), "permission") || strings.Contains(err.Error(), "access") {
+			return fmt.Errorf("failed to write QR code: permission denied (check directory permissions)")
+		}
 		return fmt.Errorf("failed to generate QR code: %w", err)
 	}
 
@@ -45,10 +49,6 @@ func DisplayQRCodeTerminal(ssid, password string, size int) {
 
 	fmt.Println("\n📱 Scan this QR code to connect:")
 	fmt.Println()
-
-	if size < 1 {
-		size = 1
-	}
 
 	block := strings.Repeat("██", size)
 	space := strings.Repeat("  ", size)

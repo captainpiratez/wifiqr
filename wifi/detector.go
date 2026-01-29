@@ -17,12 +17,12 @@ func GetCurrentSSID() (string, error) {
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
-		// Match exactly "SSID : <name>" to avoid false positives
-		if strings.HasPrefix(trimmedLine, "SSID") && !strings.HasPrefix(trimmedLine, "BSSID") {
-			parts := strings.SplitN(line, ":", 2)
+		// Match exactly "SSID :" field to avoid false positives
+		if strings.HasPrefix(trimmedLine, "SSID") && strings.Contains(trimmedLine, ":") && !strings.HasPrefix(trimmedLine, "BSSID") {
+			parts := strings.SplitN(trimmedLine, ":", 2)
 			if len(parts) == 2 {
 				ssid := strings.TrimSpace(parts[1])
-				if ssid != "" {
+				if ssid != "" && ssid != "None" {
 					return ssid, nil
 				}
 			}
@@ -32,16 +32,50 @@ func GetCurrentSSID() (string, error) {
 	return "", fmt.Errorf("no connected WiFi network found")
 }
 
-// GetPassword retrieves the WiFi password for a given SSID
-func GetPassword(ssid string) (string, error) {
+// GetSecurityType detects the WiFi security type from netsh output
+func GetSecurityType(output []byte) string {
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmedLine, "Authentication") {
+			parts := strings.SplitN(trimmedLine, ":", 2)
+			if len(parts) == 2 {
+				auth := strings.ToLower(strings.TrimSpace(parts[1]))
+				if strings.Contains(auth, "wpa3") {
+					return "WPA3"
+				} else if strings.Contains(auth, "wpa2") {
+					return "WPA2"
+				} else if strings.Contains(auth, "wpa") {
+					return "WPA"
+				} else if strings.Contains(auth, "open") {
+					return "nopass"
+				}
+			}
+		}
+	}
+	return "WPA"
+}
+
+// PasswordResult holds password and security info
+type PasswordResult struct {
+	Password     string
+	SecurityType string
+}
+
+// GetPasswordAndType retrieves the WiFi password and security type for a given SSID
+func GetPasswordAndType(ssid string) (*PasswordResult, error) {
 	cmd := exec.Command("netsh", "wlan", "show", "profile", ssid, "key=clear")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		message := strings.ToLower(string(output))
 		if strings.Contains(message, "access is denied") {
-			return "", fmt.Errorf("failed to retrieve WiFi password: access denied (try running as administrator)")
+			return nil, fmt.Errorf("failed to retrieve WiFi password: access denied (try running as administrator)")
 		}
-		return "", fmt.Errorf("failed to retrieve WiFi password: %w", err)
+		return nil, fmt.Errorf("failed to retrieve WiFi password: %w", err)
+	}
+
+	result := &PasswordResult{
+		SecurityType: GetSecurityType(output),
 	}
 
 	lines := strings.Split(string(output), "\n")
@@ -57,15 +91,16 @@ func GetPassword(ssid string) (string, error) {
 		if strings.HasPrefix(trimmedLine, "Key Content") {
 			parts := strings.SplitN(trimmedLine, ":", 2)
 			if len(parts) == 2 {
-				password := strings.TrimSpace(parts[1])
-				return password, nil
+				result.Password = strings.TrimSpace(parts[1])
+				return result, nil
 			}
 		}
 	}
 
 	if securityKeyAbsent {
-		return "", nil
+		result.SecurityType = "nopass"
+		return result, nil
 	}
 
-	return "", fmt.Errorf("could not extract password for SSID: %s", ssid)
+	return nil, fmt.Errorf("could not extract password for SSID: %s", ssid)
 }

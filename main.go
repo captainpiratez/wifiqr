@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -84,19 +85,31 @@ func main() {
 
 	if ssid != "" {
 		// Use specified SSID
-		password, err = wifi.GetPassword(ssid)
+		result, err := wifi.GetPasswordAndType(ssid)
+		if err != nil {
+			log.Fatalf("Failed to retrieve WiFi details: %v", err)
+		}
+		password = result.Password
 	} else {
 		// Get current connected WiFi
 		ssid, err = wifi.GetCurrentSSID()
 		if err != nil {
-			log.Fatalf("Failed to get current WiFi: %v", err)
+			fmt.Println("⚠️  No connected WiFi network found.")
+			fmt.Println()
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Print("Enter WiFi network name (SSID): ")
+			ssid, _ = reader.ReadString('\n')
+			ssid = strings.TrimSpace(ssid)
+			if ssid == "" {
+				log.Fatal("SSID cannot be empty")
+			}
 		}
 
-		password, err = wifi.GetPassword(ssid)
-	}
-
-	if err != nil {
-		log.Fatalf("Failed to retrieve WiFi details: %v", err)
+		result, err := wifi.GetPasswordAndType(ssid)
+		if err != nil {
+			log.Fatalf("Failed to retrieve WiFi details: %v", err)
+		}
+		password = result.Password
 	}
 
 	fmt.Printf("Network: %s\n", ssid)

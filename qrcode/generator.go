@@ -23,10 +23,12 @@ func escapeWiFiString(s string) string {
 }
 
 // GenerateWiFiQR creates a QR code for WiFi connection details
-// WiFi QR format: WIFI:T:WPA;S:SSID;P:PASSWORD;;
+// WiFi QR format:
+//   - WPA/WPA2: WIFI:T:WPA;S:SSID;P:PASSWORD;;
+//   - Open:    WIFI:T:nopass;S:SSID;;
 func GenerateWiFiQR(ssid, password, outputPath string) error {
 	// Build WiFi connection string with escaped special characters
-	wifiString := fmt.Sprintf("WIFI:T:WPA;S:%s;P:%s;;", escapeWiFiString(ssid), escapeWiFiString(password))
+	wifiString := buildWiFiString(ssid, password)
 
 	// Generate QR code
 	err := qr.WriteFile(wifiString, qr.Medium, 256, outputPath)
@@ -39,7 +41,7 @@ func GenerateWiFiQR(ssid, password, outputPath string) error {
 
 // DisplayQRCodeTerminal displays the QR code in the terminal
 func DisplayQRCodeTerminal(ssid, password string, size int) {
-	wifiString := fmt.Sprintf("WIFI:T:WPA;S:%s;P:%s;;", escapeWiFiString(ssid), escapeWiFiString(password))
+	wifiString := buildWiFiString(ssid, password)
 
 	fmt.Println("\n📱 Scan this QR code to connect:")
 	fmt.Println()
@@ -62,4 +64,13 @@ func DisplayQRCodeTerminal(ssid, password string, size int) {
 	qrterminal.GenerateWithConfig(wifiString, config)
 
 	fmt.Println()
+}
+
+func buildWiFiString(ssid, password string) string {
+	escapedSSID := escapeWiFiString(ssid)
+	escapedPassword := escapeWiFiString(password)
+	if password == "" {
+		return fmt.Sprintf("WIFI:T:nopass;S:%s;;", escapedSSID)
+	}
+	return fmt.Sprintf("WIFI:T:WPA;S:%s;P:%s;;", escapedSSID, escapedPassword)
 }

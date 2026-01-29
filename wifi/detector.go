@@ -35,20 +35,36 @@ func GetCurrentSSID() (string, error) {
 // GetPassword retrieves the WiFi password for a given SSID
 func GetPassword(ssid string) (string, error) {
 	cmd := exec.Command("netsh", "wlan", "show", "profile", ssid, "key=clear")
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve WiFi password (requires admin privileges): %w", err)
+		message := strings.ToLower(string(output))
+		if strings.Contains(message, "access is denied") {
+			return "", fmt.Errorf("failed to retrieve WiFi password: access denied (try running as administrator)")
+		}
+		return "", fmt.Errorf("failed to retrieve WiFi password: %w", err)
 	}
 
 	lines := strings.Split(string(output), "\n")
+	securityKeyAbsent := false
 	for _, line := range lines {
-		if strings.Contains(line, "Key Content") {
-			parts := strings.Split(line, ":")
-			if len(parts) > 1 {
+		trimmedLine := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmedLine, "Security key") && strings.Contains(trimmedLine, "Absent") {
+			securityKeyAbsent = true
+		}
+		if strings.HasPrefix(trimmedLine, "Authentication") && strings.Contains(strings.ToLower(trimmedLine), "open") {
+			securityKeyAbsent = true
+		}
+		if strings.HasPrefix(trimmedLine, "Key Content") {
+			parts := strings.SplitN(trimmedLine, ":", 2)
+			if len(parts) == 2 {
 				password := strings.TrimSpace(parts[1])
 				return password, nil
 			}
 		}
+	}
+
+	if securityKeyAbsent {
+		return "", nil
 	}
 
 	return "", fmt.Errorf("could not extract password for SSID: %s", ssid)

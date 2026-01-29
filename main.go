@@ -45,6 +45,10 @@ func main() {
 		return
 	}
 
+	if *sizeFlag < 1 || *sizeFlag > 5 {
+		log.Fatalf("Size must be between 1 and 5 (got %d)", *sizeFlag)
+	}
+
 	var ssid string
 	var password string
 	var err error

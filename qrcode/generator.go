@@ -9,11 +9,24 @@ import (
 	qr "github.com/skip2/go-qrcode"
 )
 
+// escapeWiFiString escapes special characters for WiFi QR code format
+// Special chars: \ ; , : "
+func escapeWiFiString(s string) string {
+	replacer := strings.NewReplacer(
+		"\\", "\\\\",
+		";", "\\;",
+		",", "\\,",
+		":", "\\:",
+		"\"", "\\\"",
+	)
+	return replacer.Replace(s)
+}
+
 // GenerateWiFiQR creates a QR code for WiFi connection details
 // WiFi QR format: WIFI:T:WPA;S:SSID;P:PASSWORD;;
 func GenerateWiFiQR(ssid, password, outputPath string) error {
-	// Build WiFi connection string
-	wifiString := fmt.Sprintf("WIFI:T:WPA;S:%s;P:%s;;", ssid, password)
+	// Build WiFi connection string with escaped special characters
+	wifiString := fmt.Sprintf("WIFI:T:WPA;S:%s;P:%s;;", escapeWiFiString(ssid), escapeWiFiString(password))
 
 	// Generate QR code
 	err := qr.WriteFile(wifiString, qr.Medium, 256, outputPath)
@@ -26,7 +39,7 @@ func GenerateWiFiQR(ssid, password, outputPath string) error {
 
 // DisplayQRCodeTerminal displays the QR code in the terminal
 func DisplayQRCodeTerminal(ssid, password string, size int) {
-	wifiString := fmt.Sprintf("WIFI:T:WPA;S:%s;P:%s;;", ssid, password)
+	wifiString := fmt.Sprintf("WIFI:T:WPA;S:%s;P:%s;;", escapeWiFiString(ssid), escapeWiFiString(password))
 
 	fmt.Println("\n📱 Scan this QR code to connect:")
 	fmt.Println()

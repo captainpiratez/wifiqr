@@ -13,7 +13,7 @@ func main() {
 	ssidFlag := flag.String("ssid", "", "WiFi network name (optional)")
 	ssidShortFlag := flag.String("s", "", "WiFi network name (optional) (shorthand)")
 	outputFlag := flag.String("output", "wifi_qr.png", "Output file path (used with -image)")
-	outputShortFlag := flag.String("o", "wifi_qr.png", "Output file path (used with -image) (shorthand)")
+	outputShortFlag := flag.String("o", "", "Output file path (used with -image) (shorthand)")
 	imageFlag := flag.Bool("image", false, "Save QR code as an image instead of terminal output")
 	imageShortFlag := flag.Bool("i", false, "Save QR code as an image instead of terminal output (shorthand)")
 	sizeFlag := flag.Int("size", 1, "Terminal QR size multiplier (1 = default)")
@@ -74,17 +74,18 @@ func main() {
 	fmt.Printf("Network: %s\n", ssid)
 	fmt.Println("Generating QR code...")
 
-	if *outputFlag == "wifi_qr.png" && *outputShortFlag != "wifi_qr.png" {
-		*outputFlag = *outputShortFlag
+	outputPath := *outputFlag
+	if *outputShortFlag != "" {
+		outputPath = *outputShortFlag
 	}
 
 	if *imageFlag || *imageShortFlag {
 		// Save to file
-		err = qrcode.GenerateWiFiQR(ssid, password, *outputFlag)
+		err = qrcode.GenerateWiFiQR(ssid, password, outputPath)
 		if err != nil {
 			log.Fatalf("Failed to generate QR code: %v", err)
 		}
-		fmt.Printf("✓ QR code saved to: %s\n", *outputFlag)
+		fmt.Printf("✓ QR code saved to: %s\n", outputPath)
 	} else {
 		// Display in terminal (default)
 		qrcode.DisplayQRCodeTerminal(ssid, password, *sizeFlag)

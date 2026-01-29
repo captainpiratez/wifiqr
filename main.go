@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/captainpiratez/wifiqr/qrcode"
 	"github.com/captainpiratez/wifiqr/wifi"
@@ -58,6 +61,27 @@ func main() {
 		ssid = *ssidShortFlag
 	}
 
+	imageChoice := *imageFlag || *imageShortFlag
+	outputPath := *outputFlag
+	if *outputShortFlag != "" {
+		outputPath = *outputShortFlag
+	}
+
+	if imageChoice {
+		trimmedOutput := strings.TrimSpace(outputPath)
+		if trimmedOutput == "" {
+			log.Fatal("Output path cannot be empty when using --image")
+		}
+		outputPath = trimmedOutput
+		outputDir := filepath.Dir(outputPath)
+		if outputDir != "." && outputDir != "" {
+			info, statErr := os.Stat(outputDir)
+			if statErr != nil || !info.IsDir() {
+				log.Fatalf("Output directory does not exist: %s", outputDir)
+			}
+		}
+	}
+
 	if ssid != "" {
 		// Use specified SSID
 		password, err = wifi.GetPassword(ssid)
@@ -78,12 +102,7 @@ func main() {
 	fmt.Printf("Network: %s\n", ssid)
 	fmt.Println("Generating QR code...")
 
-	outputPath := *outputFlag
-	if *outputShortFlag != "" {
-		outputPath = *outputShortFlag
-	}
-
-	if *imageFlag || *imageShortFlag {
+	if imageChoice {
 		// Save to file
 		err = qrcode.GenerateWiFiQR(ssid, password, outputPath)
 		if err != nil {
